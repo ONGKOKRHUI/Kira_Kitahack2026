@@ -1,0 +1,85 @@
+name: kira_app
+description: "Kira - Carbon Footprint Tracker for Malaysian SMEs"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ============================================
+  # UI & Design
+  # ============================================
+  cupertino_icons: ^1.0.8         # iOS style icons
+  google_fonts: ^6.2.1            # Inter font family
+  flutter_animate: ^4.5.0         # Smooth animations
+  
+  # ============================================
+  # State Management
+  # ============================================
+  flutter_riverpod: ^2.6.1        # Recommended state management
+  riverpod_annotation: ^2.6.1     # Code generation for Riverpod
+  
+  # ============================================
+  # Routing
+  # ============================================
+  go_router: ^14.8.1              # Declarative routing
+  
+  # ============================================
+  # Charts & Visualization
+  # ============================================
+  fl_chart: ^0.69.2               # Pie charts, line charts
+  
+  # ============================================
+  # Utilities
+  # ============================================
+  intl: ^0.20.2                   # Number/date formatting
+  uuid: ^4.5.1                    # Generate unique IDs
+  
+  # ============================================
+  # AI Integration - Gemini
+  # ============================================
+  google_generative_ai: ^0.4.6    # Gemini API for receipt extraction
+  
+  # ============================================
+  # Firebase - Backend Services
+  # ============================================
+  firebase_core: ^3.4.0          # Firebase SDK (updated)
+  cloud_firestore: ^5.4.2        # Firestore database (updated)
+  firebase_auth: ^5.3.0          # Authentication (updated)
+  google_sign_in: ^6.3.0         # Google OAuth
+  http: ^1.2.0                    # HTTP client for Genkit API
+  
+  # ============================================
+  # File Upload
+  # ============================================
+  image_picker: ^1.1.2            # Camera & gallery access
+  file_picker: ^8.1.6             # PDF selection
+  syncfusion_flutter_pdfviewer: ^28.2.7  # PDF viewer widget (updated for intl compatibility)
+  
+  # ============================================
+  # Local Storage (using sqflite instead of Hive)
+  # ============================================
+  sqflite: ^2.4.1                 # SQL database
+  path_provider: ^2.1.5           # App directories
+  path: ^1.9.0                    # Path utilities
+  flutter_dotenv: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  # Code generation
+  build_runner: ^2.4.15
+  riverpod_generator: ^2.6.4
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/icons/
+    - .env

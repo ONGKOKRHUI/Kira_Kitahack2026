@@ -1,0 +1,37 @@
+# Flutter
+kira_flutter/build/
+kira_flutter/.dart_tool/
+kira_flutter/.packages
+kira_flutter/.pub-cache/
+kira_flutter/.pub/
+kira_flutter/*.iml
+kira_flutter/*.lock
+kira_flutter/.fvm/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Firebase Functions
+kira_functions/node_modules/
+kira_functions/lib/
+
+# React app (if any)
+kira-app/node_modules/
+node_modules/
+
+# Environment files - CRITICAL: Never commit API keys
+.env
+.env.*
+*.env
+*.local
+kira_flutter/.env
+kira_flutter/.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
