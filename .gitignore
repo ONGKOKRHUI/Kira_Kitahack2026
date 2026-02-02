@@ -38,3 +38,6 @@ Thumbs.db
 
 #virtual env
 venv
+
+#backend
+firebase-backend/node_modules
