@@ -22,7 +22,7 @@ const ItemSchema = ai.defineSchema(
         price: z.number().describe("The total price for this line item."),
         currency: z.string().default("MYR"),
         isGitaEligible: z.boolean().describe("Whether this item qualifies for GITA (Green Investment Tax Incentive)"),
-        dateOfPurchase: z.boolean().describe("The date of this invoice issued in YYYY-MM-DD format.")
+        dateOfPurchase: z.string().describe("The date of this invoice issued in YYYY-MM-DD format.")
     })
 );
 
