@@ -3,6 +3,8 @@ import {genkit, z} from "genkit";
 import { googleAI } from '@genkit-ai/google-genai';
 import path from "path";
 import { readFile } from 'node:fs/promises'; 
+import { onCallGenkit } from 'firebase-functions/https';
+import { defineSecret } from 'firebase-functions/params';
 
 const ai = genkit({
     plugins: [
@@ -134,6 +136,7 @@ export const categoriseItems = ai.defineFlow(
         }
 
         // do Firebase DB to store into gitaEntries collection and carbonEntries collection
+        // implementation at saveEntriesToFirestore()
         // skip this for now
 
         // error handling
@@ -284,3 +287,47 @@ export const convertToGitaEntry = ai.defineFlow(
         return output;
     }
 );
+
+///////////////////////////////////////////////////
+// BELOW'S CODE INVOLVE INTERGATION WITH FLUTTER //
+///////////////////////////////////////////////////
+
+const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
+
+// helper function to save CarbonEntrySchema and GITAEntrySchema to carbonEntries and gitaEntries collection of the user in Firebase
+async function saveEntriesToFirestore(
+    userId: string,
+    carbonEntries: any[],
+    gitaEntries: any[]
+) {
+
+}
+
+// main wrapper function to extract invoice, convert to resepctive entry, store to user firestore
+export const kiraProcessor = onCallGenkit(
+    {
+        secrets: [apiKey], //api key
+        // enable only authenticated user parameter
+    },
+    async (request) => {
+        // get userId and data (eg: pdf, png, jpg) from frontend
+        const { imageUrl, userId } = request.data;
+
+        // run extractInvoice() flow 
+        const extractedData = await extractInvoice(imageUrl);
+
+        // run categoriseItem() flow 
+        const { gitaEntries, carbonEntries } = await categoriseItems(extractedData);
+
+        // store to user's Firebase via saveEntriesToFirestore()
+        await saveEntriesToFirestore(userId, gitaEntries, carbonEntries);
+
+        // error handling 
+
+        // return success message upon completion
+        return {
+            message: "Invoice processed and stored to Firebase.",
+            itemCount: extractedData.items.length 
+        }
+    }
+)

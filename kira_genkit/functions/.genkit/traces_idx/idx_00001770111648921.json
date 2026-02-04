@@ -2,3 +2,9 @@
 {"id":"b8ba79f36b03eb274cbbf13e478180c0","type":"flow","start":1770111867018,"name":"convertToCarbonEntry","end":1770111875745.191,"status":0}
 {"id":"5c4dff8f3f9adc47dccbdb7edb240c70","type":"flow","start":1770112228459,"name":"convertToGitaEntry","status":0}
 {"id":"5c4dff8f3f9adc47dccbdb7edb240c70","type":"flow","start":1770112228459,"name":"convertToGitaEntry","end":1770112236795.4233,"status":0}
+{"id":"351c1dba8e8e2bf3716e6f952c3bbda7","type":"flow","start":1770180041222,"name":"extractInvoice","status":0}
+{"id":"351c1dba8e8e2bf3716e6f952c3bbda7","type":"flow","start":1770180041222,"name":"extractInvoice","end":1770180049119.972,"status":0}
+{"id":"07b104982f3eea2448e7c2c09ad8a3fa","type":"flow","start":1770180123043,"name":"convertToCarbonEntry","status":0}
+{"id":"07b104982f3eea2448e7c2c09ad8a3fa","type":"flow","start":1770180123043,"name":"convertToCarbonEntry","end":1770180129541.7205,"status":0}
+{"id":"772a01bc596ff30c5d0064e6eea7e5d5","type":"flow","start":1770180316337,"name":"categoriseItems","status":0}
+{"id":"772a01bc596ff30c5d0064e6eea7e5d5","type":"flow","start":1770180316337,"name":"categoriseItems","end":1770180348163.1511,"status":0}
