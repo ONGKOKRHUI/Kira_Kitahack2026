@@ -24,7 +24,7 @@ async function seed() {
   await db.collection('myhijau_assets').add({
     name: 'Solar Panel PV-200',
     supplier: 'SolarX Sdn Bhd',
-    keywords: ['solar', 'panel', 'energy'],
+    keywords: ['solar', 'panel', 'energy', 'renewable', 'solar panel', 'solar panels'],
     expiryDate: '2027-12-31'
   });
   

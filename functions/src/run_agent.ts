@@ -45,6 +45,39 @@ const searchMyHijauTool = ai.defineTool(
   }
 );
 
+  // const searchMyHijauTool = ai.defineTool(
+  //   {
+  //     name: 'searchMyHijauDirectory',
+  //     // CHANGE 1: We explicitly tell the AI to use single keywords
+  //     description: 'Finds green assets. Search by ONE keyword only (e.g. "solar", "chiller", "led").', 
+  //     inputSchema: z.object({
+  //       // CHANGE 2: Reinforce it in the schema description
+  //       query: z.string().describe('A single keyword to search for.'),
+  //     }),
+  //     outputSchema: z.object({
+  //       results: z.array(z.any()),
+  //     }),
+  //   },
+  //   async ({ query }) => {
+  //     // CHANGE 3: Simple cleanup to ensure lower case
+  //     const term = query.toLowerCase().trim();
+  //     console.log(`[TOOL] Searching MyHijau for keyword: "${term}"`);
+      
+  //     const snapshot = await db.collection('myhijau_assets')
+  //       .where('keywords', 'array-contains', term)
+  //       .limit(5)
+  //       .get();
+        
+  //     if (snapshot.empty) {
+  //         console.log("   -> No results found in DB.");
+  //     } else {
+  //         console.log(`   -> Found ${snapshot.size} results.`);
+  //     }
+
+  //     return { results: snapshot.docs.map(d => d.data()) };
+  //   }
+  // );
+
 const taxSimulatorTool = ai.defineTool(
   {
     name: 'simulateTaxImpact',
@@ -90,6 +123,7 @@ const wiraBotFlow = ai.defineFlow(
     const { text } = await ai.generate({
       prompt: `
         You are Wira, an AI Carbon Consultant.
+        Current User ID: ${userId}
         User Context: ${context}
         Goal: Minimize carbon tax liability.
         User Query: ${message}
@@ -106,13 +140,13 @@ const wiraBotFlow = ai.defineFlow(
 async function main() {
   const userId = 'user123';
 
-  // TEST 1: General Chat
+  // TEST 1: General Chat - No Tool Usage Chit Chat
   // const response1 = await wiraBotFlow({ userId, message: "Hello, who are you?" });
   // console.log("Response 1:", response1);
 
-  // TEST 2: Tool Usage (Database Search)
-//   const response2 = await wiraBotFlow({ userId, message: "I need to buy a solar panel." });
-//   console.log("Response 2:", response2);
+  // TEST 2: Tool Usage - calls searchMyHijau tool
+  // const response2 = await wiraBotFlow({ userId, message: "I need to buy a solar panel." });
+  // console.log("Response 2:", response2);
 
   // TEST 3: Tool Usage (Tax Calculation)
   const response3 = await wiraBotFlow({ userId, message: "If the carbon tax is RM 35 per tonne, how much will I pay?" });

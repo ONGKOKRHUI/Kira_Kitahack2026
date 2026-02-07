@@ -46,3 +46,28 @@ i  Emulator UI already enabled with port: (automatic)
   - npm install @genkit-ai/google-genai
   - npm install genkit zod
   - verify: npm list @genkit-ai/google-genai
+
+- RUN: npx ts-node run_agent.ts
+- RUN ANYWHERE: dotenvx run -- npx ts-node run_agent.ts
+
+### Test results
+1. Normal Chat
+--- Processing Request for user123 ---
+Context: Industry: Manufacturing, Annual Emissions: 1440t.
+Response 1: Hello! I'm Wira, your AI Carbon Consultant. I specialize in helping manufacturing businesses like yours minimize their carbon tax liability. With your annual emissions around 1440 tonnes, I can help you find ways to reduce that and save on taxes. How can I assist you today?
+
+2. searchMyHijauDirectory
+--- Processing Request for user123 ---
+Context: Industry: Manufacturing, Annual Emissions: 1440t.
+[TOOL] Searching MyHijau for: solar panel
+Response 2: Great! I found "Solar Panel PV-200" from SolarX Sdn Bhd, approved until 2027-12-31.
+
+This is a good step towards reducing your carbon footprint. To help you further minimize your carbon tax liability, I can simulate the tax impact of using this solar panel.
+
+Would you like me to proceed with that simulation?
+
+3. simulateTaxCalculation
+--- Processing Request for user123 ---
+Context: Industry: Manufacturing, Annual Emissions: 1440t.
+[TOOL] Simulating Tax for User: user123 at Rate: 35
+Response 3: Your carbon tax liability will be RM 50,400.
