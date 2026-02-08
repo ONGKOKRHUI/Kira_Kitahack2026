@@ -50,6 +50,44 @@ i  Emulator UI already enabled with port: (automatic)
 - RUN: npx ts-node run_agent.ts
 - RUN ANYWHERE: dotenvx run -- npx ts-node run_agent.ts
 
+9. add select specific invoice feature - frontend call instructions
+In your frontend (React, Vue, etc.), you will have a dropdown. When the user sends a message, you check if an invoice is selected in that dropdown.
+
+- Populating the Dropdown (Frontend Code) You likely already know this, but you just query the invoices collection where userId == currentUser.
+
+- Calling the Bot (Frontend Code) This is how you structure the call to the Firebase Callable Function.
+
+Sample:
+```JAVASCRIPT
+import { getFunctions, httpsCallable } from "firebase/functions";
+
+// Initialize functions
+const functions = getFunctions();
+const wiraBot = httpsCallable(functions, 'wiraBot');
+
+async function handleSendMessage() {
+  const userMessage = "How can I reduce emissions for this?"; // User input
+  const selectedInvoiceId = "inv_8823_TN"; // From your dropdown state (or null)
+
+  try {
+    const result = await wiraBot({
+      userId: "user123",        // Current user
+      message: userMessage,     // The question
+      invoiceId: selectedInvoiceId // Pass ID if selected, otherwise undefined
+    });
+
+    console.log("Wira says:", result.data.text);
+    // Display result.data.text in your chat UI
+    
+  } catch (error) {
+    console.error("Error calling WiraBot:", error);
+  }
+}
+```
+
+
+
+
 ### Test results
 1. Normal Chat
 --- Processing Request for user123 ---

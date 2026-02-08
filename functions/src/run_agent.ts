@@ -104,7 +104,7 @@ const taxSimulatorTool = ai.defineTool(
   }
 );
 
-// --- TOOL 3: INVESTMENT SIMULATOR (NEW) ---
+// --- TOOL 3: INVESTMENT SIMULATOR ---
 const investmentSimulatorTool = ai.defineTool(
   {
     name: 'simulateInvestment',
@@ -151,7 +151,7 @@ const investmentSimulatorTool = ai.defineTool(
   }
 );
 
-// --- TOOL 4: INDUSTRY BENCHMARK (NEW) ---
+// --- TOOL 4: INDUSTRY BENCHMARK ---
 const industryBenchmarkTool = ai.defineTool(
   {
     name: 'getIndustryBenchmark',
@@ -193,32 +193,74 @@ const industryBenchmarkTool = ai.defineTool(
   }
 );
 
+// --- HELPER: Fetch Invoice Details ---
+async function getInvoiceContext(invoiceId: string | undefined): Promise<string> {
+  if (!invoiceId) return "";
+
+  try {
+    const doc = await db.collection('invoices').doc(invoiceId).get();
+    if (!doc.exists) return "\n[System] User selected an invoice, but ID was not found.";
+    
+    const data = doc.data();
+    // Format the invoice data for the LLM to read
+    return `
+    \n=== SELECTED INVOICE CONTEXT ===
+    Invoice ID: ${invoiceId}
+    Vendor: ${data?.vendorName || "Unknown"}
+    Date: ${data?.date || "N/A"}
+    Items: ${JSON.stringify(data?.items || [])}
+    Total Emissions: ${data?.carbonFootprint || 0} kgCO2e
+    Fuel/Energy Type: ${data?.fuelType || "N/A"}
+    Usage Amount: ${data?.usageAmount || 0} ${data?.usageUnit || ""}
+    ================================
+    `;
+  } catch (error) {
+    console.error("Error fetching invoice:", error);
+    return "\n[System] Error retrieving invoice details.";
+  }
+}
 
 // --- THE AGENT FLOW ---
 
 const wiraBotFlow = ai.defineFlow(
   {
     name: 'wiraBot',
-    inputSchema: z.object({ userId: z.string(), message: z.string() }),
+    inputSchema: z.object({ 
+      userId: z.string(), 
+      message: z.string(),
+      invoiceId: z.string().optional(), 
+    }),
     outputSchema: z.string(),
   },
-  async ({ userId, message }) => {
+  async ({ userId, message, invoiceId}) => {
     // Fetch user context
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    const context = userData 
+    const userProfile = userData 
       ? `Industry: ${userData.industry}, Annual Emissions: ${userData.totalEmissions}t.` 
       : "Guest User";
-
+    
+    // 2. Fetch Selected Invoice (if any)
+    const invoiceContext = await getInvoiceContext(invoiceId);
     console.log(`\n--- Processing Request for ${userId} ---`);
-    console.log(`Context: ${context}`);
+    console.log(`Invoice Context ${invoiceContext}`);
+    console.log(`User Context: ${userProfile}`);
 
     const { text } = await ai.generate({
       prompt: `
         You are Wira, an AI Carbon Consultant.
-        Current User ID: ${userId}
-        User Context: ${context}
-        Goal: Minimize carbon tax liability.
+        
+        -- USER PROFILE --
+        ${userProfile}
+        
+        -- ACTIVE CONTEXT --
+        ${invoiceContext ? `User is asking about this specific invoice:${invoiceContext}` : "No specific invoice selected."}
+        
+        -- GOAL --
+        If an invoice is selected, analyze it specifically. 
+        - If they ask "how to reduce", look at the 'Items' or 'FuelType' in the invoice and suggest alternatives (use searchMyHijauDirectory if needed).
+        - If they ask "is this good", compare the emission intensity.
+        
         User Query: ${message}
       `,
       tools: [searchMyHijauTool, taxSimulatorTool, investmentSimulatorTool, industryBenchmarkTool], 
@@ -246,14 +288,24 @@ async function main() {
   // console.log("Response 3:", response3);
   
   // TEST 4: Investment Simulator
-  console.log("\n--- TEST 4: Investment Simulator ---");
-  const res4 = await wiraBotFlow({ userId, message: "Is it worth investing in solar panels?" });
-  console.log("Response:", res4);
+  // console.log("\n--- TEST 4: Investment Simulator ---");
+  // const res4 = await wiraBotFlow({ userId, message: "Is it worth investing in solar panels?" });
+  // console.log("Response:", res4);
 
   // TEST 5: Industry Benchmark
-  console.log("\n--- TEST 5: Industry Benchmark ---");
-  const res5 = await wiraBotFlow({ userId, message: "How does my carbon footprint compare to other manufacturers?" });
-  console.log("Response:", res5);
+  // console.log("\n--- TEST 5: Industry Benchmark ---");
+  // const res5 = await wiraBotFlow({ userId, message: "How does my carbon footprint compare to other manufacturers?" });
+  // console.log("Response:", res5);
+
+  console.log("\n--- TEST 6: Invoice Context ---");
+  // User selects the invoice and asks for help
+  const res6 = await wiraBotFlow({ 
+      userId, 
+      message: "How can I reduce the carbon from this bill?", 
+      invoiceId: 'invoice_abc' // <--- Simulating dropdown selection
+  });
+  console.log("Response:", res6);
 }
 
 main().catch(console.error);
+

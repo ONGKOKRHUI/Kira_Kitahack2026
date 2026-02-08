@@ -36,6 +36,17 @@ async function seed() {
     unit: 'kgCO2e/RM'
   });
   console.log("✅ Industry stats created.");
+
+  await db.collection('invoices').doc('invoice_abc').set({
+    vendorName: 'TNB',
+    date: '2025-01-15',
+    fuelType: 'Electricity',
+    usageAmount: 5000,
+    usageUnit: 'kWh',
+    carbonFootprint: 2500, // 0.5 * 5000
+    items: [{ description: "Commercial Tariff B", cost: 2500 }]
+  });
+  console.log("✅ Invoice 'invoice_abc' created.");
 }
 
 seed().catch(console.error);
