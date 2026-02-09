@@ -200,6 +200,13 @@ export const convertToCarbonEntryFlow = ai.defineFlow(
         return output;
     }
 );
+export const convertToCarbonEntry = onCallGenkit(
+    {
+        secrets: [googleAIapiKey],
+    },
+    convertToCarbonEntryFlow
+);
+
 
 // define flow for convertToGitaEntryFlow()
 export const convertToGitaEntryFlow = ai.defineFlow(
@@ -298,6 +305,12 @@ export const convertToGitaEntryFlow = ai.defineFlow(
         
         return output;
     }
+);
+export const convertToGitaEntry = onCallGenkit(
+    {
+        secrets: [googleAIapiKey],
+    },
+    convertToGitaEntryFlow
 );
 
 // QUICK RUN COMMANDS:
