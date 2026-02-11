@@ -5,6 +5,11 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kira_app/data/repositories/carbon_item_repository.dart';
+import 'package:kira_app/data/repositories/gita_item_repository.dart';
+import 'package:kira_app/data/repositories/item_repository.dart';
+import 'package:kira_app/data/repositories/receipt_repository.dart';
+import 'package:kira_app/data/services/receipt_service.dart';
 import '../data/models/receipt.dart';
 import '../data/services/genkit_service.dart';
 import 'auth_providers.dart';
@@ -15,6 +20,28 @@ import 'auth_providers.dart';
 
 final genkitServiceProvider = Provider<GenkitService>((ref) {
   return GenkitService();
+});
+
+final receiptRepositoryProvider  = Provider<ReceiptRepository>((ref) {
+  return ReceiptRepository();
+});
+
+final gitaItemRepositoryProvider = Provider<GitaItemRepository>((ref) {
+  return GitaItemRepository();
+});
+
+final carbonItemRepositoryProvider = Provider<CarbonItemRepository>((ref) {
+  return CarbonItemRepository();
+});
+
+
+final receiptServiceProvider = Provider<ReceiptService>((ref) {
+  return ReceiptService(
+    receiptRepository: ref.read(receiptRepositoryProvider),
+    gitaItemRepository: ref.read(gitaItemRepositoryProvider),
+    carbonItemRepository: ref.read(carbonItemRepositoryProvider),
+    genkitService: ref.read(genkitServiceProvider)
+  );
 });
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -120,11 +147,17 @@ final gitaReceiptsByTierProvider = Provider.family<List<Receipt>, int>((ref, tie
 // ═══════════════════════════════════════════════════════
 
 /// Receipt upload state notifier
-class ReceiptUploadNotifier extends StateNotifier<AsyncValue<void>> {
+// class ReceiptUploadNotifier extends StateNotifier<AsyncValue<void>> {
+class ReceiptUploadNotifier extends AsyncNotifier<void> {
   final GenkitService _genkit;
   final String? _userId;
   
   ReceiptUploadNotifier(this._genkit, this._userId) : super(const AsyncValue.data(null));
+
+  @override
+  Future<void> build() async {
+    // abstract implementation
+  }
   
   /// Upload receipt from bytes
   Future<void> uploadReceipt(Uint8List imageBytes) async {
@@ -139,7 +172,9 @@ class ReceiptUploadNotifier extends StateNotifier<AsyncValue<void>> {
       print('📤 Uploading receipt...');
       
       // Genkit processes and saves to Firestore automatically
-      final receipt = await _genkit.processReceipt(imageBytes, _userId!);
+      // final receipt = await _genkit.processReceipt(imageBytes, _userId!);
+      final receiptService = ref.read(receiptServiceProvider);
+      final receipt = await receiptService.processReceipt(imageBytes, _userId!);
       
       print('✅ Receipt uploaded: ${receipt.id}');
       state = const AsyncValue.data(null);
