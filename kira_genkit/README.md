@@ -7,6 +7,7 @@
    cd kira_genkit/functions
    firebase init genkit
    npm install dotenv
+   npm install firebase-admin
    ```
 
 2. **Create .env**

@@ -1,176 +1,178 @@
-import 'dotenv/config'; // additional installation
+import "dotenv/config"; // additional installation
 import {genkit, z} from "genkit";
-import { googleAI } from '@genkit-ai/google-genai';
+import {googleAI} from "@genkit-ai/google-genai";
 import path from "path";
-import { readFile } from 'node:fs/promises'; 
-import { onCallGenkit } from 'firebase-functions/https';
-import { defineSecret } from 'firebase-functions/params';
-const googleAIapiKey = defineSecret("GEMINI_API_KEY");
+import {readFile} from "node:fs/promises";
+import {onCallGenkit} from "firebase-functions/https";
+import {defineSecret} from "firebase-functions/params";
+const googleAIapiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
 
-// initialise ai 
+// initialise ai
 const ai = genkit({
-    plugins: [
-        googleAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
-    ],
+  plugins: [
+    // googleAI({apiKey: process.env.GOOGLE_GENAI_API_KEY}),
+    // googleAI({apiKey: googleAIapiKey.value()}),
+    googleAI(),
+  ],
 });
 
 // define item schema
 const ItemSchema = ai.defineSchema(
-    'ItemSchema',
-    z.object({
-        // think about what attributes does an ItemSchema have, how are each described
-        name: z.string().describe("The name of for this line item (eg: petrol, solar panel, diesal, biodegradable container)."),
-        supplier: z.string().describe("The supplier of this invoice."),
-        quantity: z.number().describe("The amount purchased for this item."),
-        unit: z.string().describe("The unit (eg: single, kg, litres) purchased for this line item."),
-        price: z.number().describe("The total price for this line item."),
-        currency: z.string().default("MYR"),
-        isGitaEligible: z.boolean().describe("Whether this item qualifies for GITA (Green Investment Tax Incentive)"),
-        dateOfPurchase: z.string().describe("The date of this invoice issued in YYYY-MM-DD format.")
-    })
+  "ItemSchema",
+  z.object({
+    // think about what attributes does an ItemSchema have, how are each described
+    name: z.string().describe("The name of for this line item (eg: petrol, solar panel, diesal, biodegradable container)."),
+    supplier: z.string().describe("The supplier of this item."),
+    quantity: z.number().describe("The amount purchased for this item."),
+    unit: z.string().describe("The unit (eg: single, kg, litres) purchased for this line item."),
+    price: z.number().describe("The total price for this line item."),
+    currency: z.string().default("MYR"),
+    isGitaEligible: z.boolean().describe("Whether this item qualifies for GITA (Green Investment Tax Incentive)"),
+    dateOfPurchase: z.string().describe("The date of this invoice issued in YYYY-MM-DD format."),
+  })
 );
 
 // define array of items as a single invoie can have multiple item
 const InvoiceResponseSchema = z.object({
-    items: z.array(ItemSchema),
-    totalAmount: z.number(),
-    invoiceNumber: z.string(),
-    dateOfPurchase: z.string().describe("The date of this invoice issued in YYYY-MM-DD format."),
-})
+  items: z.array(ItemSchema),
+  totalAmount: z.number(),
+  invoiceNumber: z.string(),
+  supplier: z.string().describe("The supplier of this invoice."),
+  dateOfPurchase: z.string().describe("The date of this invoice issued in YYYY-MM-DD format."),
+});
 
 // define gitaEntry schema
 const GITAEntrySchema = ai.defineSchema(
-    'GITAEntrySchema',
-    z.object({
-        tier: z.number().describe("The tier of this GITA entry if eligible for Green Investment Tax Allowance (GITA) Malaysia."),
-        sector: z.string().describe("The sector (eg: energy efficiency, renewable energy system, waste, water) of this GITA entry."),
-        technology: z.string().describe("The technology (eg: Transformer, Energy Efficient Appliances, Chiller, etc) of this GITA entry."),
-        asset: z.string().describe("The asset (eg: Transformer, Thermal Energy Storage/Collector, Variable Air Volume) of this GITA entry."),
-        gitaAllowance: z.number().describe("Final tax eligble for exemption based on GITA asset tier (tier 1 eligible for 100%, tier 2 eligible for 60%).")
-    })
+  "GITAEntrySchema",
+  z.object({
+    tier: z.number().describe("The tier of this GITA entry if eligible for Green Investment Tax Allowance (GITA) Malaysia."),
+    sector: z.string().describe("The sector (eg: energy efficiency, renewable energy system, waste, water) of this GITA entry."),
+    technology: z.string().describe("The technology (eg: Transformer, Energy Efficient Appliances, Chiller, etc) of this GITA entry."),
+    asset: z.string().describe("The asset (eg: Transformer, Thermal Energy Storage/Collector, Variable Air Volume) of this GITA entry."),
+    gitaAllowance: z.number().describe("Final tax eligble for exemption based on GITA asset tier (tier 1 eligible for 100%, tier 2 eligible for 60%)."),
+  })
 );
 
 
 // define carbonEntry schema
-// scope 1: 𝐶𝑂2𝑒 𝑒𝑚𝑖𝑠𝑠𝑖𝑜𝑛𝑠 = ∑𝐴𝑐𝑡𝑖𝑣𝑖𝑡𝑦 𝐷𝑎𝑡𝑎 × 𝐸𝑚𝑖𝑠𝑠𝑖𝑜𝑛 𝐹𝑎𝑐𝑡𝑜𝑟 × 𝐺𝑊P, 
+// scope 1: 𝐶𝑂2𝑒 𝑒𝑚𝑖𝑠𝑠𝑖𝑜𝑛𝑠 = ∑𝐴𝑐𝑡𝑖𝑣𝑖𝑡𝑦 𝐷𝑎𝑡𝑎 × 𝐸𝑚𝑖𝑠𝑠𝑖𝑜𝑛 𝐹𝑎𝑐𝑡𝑜𝑟 × 𝐺𝑊P,
 // scope 2: 𝐶𝑂2𝑒 𝑒𝑚𝑖𝑠𝑠𝑖𝑜𝑛𝑠 = 𝐸𝑙𝑒𝑐𝑡𝑟𝑖𝑐𝑖𝑡𝑦 𝑝𝑢𝑟𝑐ℎ𝑎𝑠𝑒𝑑 × 𝐺𝐸F
 const CarbonEntrySchema = ai.defineSchema(
-    'CarbonEntrySchema',
-    z.object({
-        scope: z.number().describe("Scope (eg: 1,2,3) according to Greenhouse Gas Protocol (GHG) of this carbon entry."),
-        activityData: z.number().describe("The activity data of carbon emission of this carbon entry."),
-        emissionFactor: z.number().describe("The activity data emission factor of carbon emission of this carbon entry if this entry is of scope 1."),
-        gwp: z.number().describe("The Grid Emission Factor (GEP) of this carbon entry if this entry is of scope 2 (electricity)."),
-        gef: z.number().describe("The activity data of carbon emission of this carbon entry."),
-        co2eEmission: z.number().describe("The co2eEmission calculated using calculateScope1 or calculateScope2 for this carbon entry based on the entry respective scope."),
-    })
+  "CarbonEntrySchema",
+  z.object({
+    scope: z.number().describe("Scope (eg: 1,2,3) according to Greenhouse Gas Protocol (GHG) of this carbon entry."),
+    activityData: z.number().describe("The activity data of carbon emission of this carbon entry."),
+    emissionFactor: z.number().describe("The activity data emission factor of carbon emission of this carbon entry if this entry is of scope 1."),
+    gwp: z.number().describe("The Grid Emission Factor (GEP) of this carbon entry if this entry is of scope 2 (electricity)."),
+    gef: z.number().describe("The activity data of carbon emission of this carbon entry."),
+    co2eEmission: z.number().describe("The co2eEmission calculated using calculateScope1 or calculateScope2 for this carbon entry based on the entry respective scope."),
+  })
 );
 
 // define flow for extractInvoice()
 // output an array on item since a single  invoice can have multiple items
 export const extractInvoiceFlow = ai.defineFlow(
-    {
-        name: 'extractInvoiceFlow', 
-        inputSchema: z.object({
-            file: z.string().describe("URL or local path to the invoice file"),
-        }),
-        outputSchema: InvoiceResponseSchema 
-    },
-    async (input) => {
-        const { dataUrl } = await ai.run('load-invoice-file', async () => {
-            const filePath = path.resolve(input.file);
-            const fileExtension = path.extname(filePath).toLowerCase();
-            
-            let mimeType = fileExtension === '.pdf' ? 'application/pdf' : `image/${fileExtension.replace('.', '')}`;
-            const b64Data = await readFile(filePath, { encoding: 'base64' });
-            return { dataUrl: `data:${mimeType};base64,${b64Data}` };
-        });
+  {
+    name: "extractInvoiceFlow",
+    inputSchema: z.object({
+      file: z.string().describe("URL or local path to the invoice file"),
+    }),
+    outputSchema: InvoiceResponseSchema,
+  },
+  async (input) => {
+    const {dataUrl} = await ai.run("load-invoice-file", async () => {
+      const filePath = path.resolve(input.file);
+      const fileExtension = path.extname(filePath).toLowerCase();
 
-        const { output } = await ai.generate({
-            model: googleAI.model('gemini-2.5-flash'),
-            prompt: [
-                { media: { url: dataUrl } },
-                { text: "Extract all line items and total amounts from this invoice. Identify if assets are eligible for Green Investment Tax Incentive (GITA)." },
-            ],
-            output: {
-                schema: InvoiceResponseSchema,
-            }
-        });
+      const mimeType = fileExtension === ".pdf" ? "application/pdf" : `image/${fileExtension.replace(".", "")}`;
+      const b64Data = await readFile(filePath, {encoding: "base64"});
+      return {dataUrl: `data:${mimeType};base64,${b64Data}`};
+    });
 
-        // error handling
-        if (!output) {
-            throw new Error('Extraction failed.');
-        }
+    const {output} = await ai.generate({
+      model: googleAI.model("gemini-2.5-flash"),
+      prompt: [
+        {media: {url: dataUrl}},
+        {text: "Extract all line items and total amounts from this invoice. Identify if assets are eligible for Green Investment Tax Incentive (GITA)."},
+      ],
+      output: {
+        schema: InvoiceResponseSchema,
+      },
+    });
 
-        return output;
+    // error handling
+    if (!output) {
+      throw new Error("Extraction failed.");
     }
+
+    return output;
+  }
 );
 export const extractInvoice = onCallGenkit(
-    {
-        secrets: [googleAIapiKey],
-    },
-    extractInvoiceFlow
+  {
+    secrets: [googleAIapiKey],
+  },
+  extractInvoiceFlow
 );
 
 // define flow for categoriseItems()
 export const categoriseItemsFlow = ai.defineFlow(
-    {
-        name: 'categoriseItemsFlow', 
-        inputSchema: InvoiceResponseSchema,
-        outputSchema: z.object({
-            gitaEntries: z.array(GITAEntrySchema),
-            carbonEntries: z.array(CarbonEntrySchema)
-        }) 
-    },
-    async (input) => {
+  {
+    name: "categoriseItemsFlow",
+    inputSchema: InvoiceResponseSchema,
+    outputSchema: z.object({
+      gitaEntries: z.array(GITAEntrySchema),
+      carbonEntries: z.array(CarbonEntrySchema),
+    }),
+  },
+  async (input) => {
+    const gitaEntries = [];
+    const carbonEntries = [];
 
-        const gitaEntries = [];
-        const carbonEntries = [];
+    // map each ItemSchema in InvoiceResponseSchema
+    for (const item of input.items) {
+      // all ItemSchema are CarbonEntrySchema
+      const carbonEntry = await ai.run(`carbon-${item.name}`, async () => {
+        return await convertToCarbonEntryFlow(item);
+      });
+      carbonEntries.push(carbonEntry);
 
-        // map each ItemSchema in InvoiceResponseSchema 
-        for (const item of input.items){
-            // all ItemSchema are CarbonEntrySchema
-            const carbonEntry = await ai.run(`carbon-${item.name}`, async () => {
-                return await convertToCarbonEntryFlow(item);
-            });
-            carbonEntries.push(carbonEntry);
-
-            // only ItemSchema with isGitaEligible are GITAEntrySchema
-            if (item.isGitaEligible) {
-                const gitaEntry = await ai.run(`gita-${item.name}`, async () => {
-                    return await convertToGitaEntryFlow(item);
-                });
-                gitaEntries.push(gitaEntry);
-            }
-        }
-
-        // error handling
-        if (!gitaEntries && !carbonEntries) {
-            throw new Error('Categorisation failed.');
-        }
-
-        return { gitaEntries, carbonEntries };
+      // only ItemSchema with isGitaEligible are GITAEntrySchema
+      if (item.isGitaEligible) {
+        const gitaEntry = await ai.run(`gita-${item.name}`, async () => {
+          return await convertToGitaEntryFlow(item);
+        });
+        gitaEntries.push(gitaEntry);
+      }
     }
+
+    // error handling
+    if (!gitaEntries && !carbonEntries) {
+      throw new Error("Categorisation failed.");
+    }
+
+    return {gitaEntries, carbonEntries};
+  }
 );
 export const categoriseItem = onCallGenkit(
-    {
-        secrets: [googleAIapiKey],
-    },
-    categoriseItemsFlow
+  {
+    secrets: [googleAIapiKey],
+  },
+  categoriseItemsFlow
 );
 
 // define flow for convertToCarbonEntryFlow()
 export const convertToCarbonEntryFlow = ai.defineFlow(
-    {
-        name: 'convertToCarbonEntryFlow', 
-        inputSchema: ItemSchema,
-        outputSchema: CarbonEntrySchema, 
-    },
-    async (item) => {
-        const { output } = await ai.generate({
-            model: googleAI.model('gemini-2.5-flash'),
-            system: `You are a GHG Protocol Auditor for Malaysia in the year 2026.
+  {
+    name: "convertToCarbonEntryFlow",
+    inputSchema: ItemSchema,
+    outputSchema: CarbonEntrySchema,
+  },
+  async (item) => {
+    const {output} = await ai.generate({
+      model: googleAI.model("gemini-2.5-flash"),
+      system: `You are a GHG Protocol Auditor for Malaysia in the year 2026.
             Greenhouse gas (GHG) emmsiion are grouped into 3 categories:
             - Scope 1 (Direct emissions): from fuel you burn in your business operations (e.g. diesel for trucks, natural gas for boilers)
             - Scope 2 (Indirect emissions): from the electricity you purchase and use
@@ -186,39 +188,39 @@ export const convertToCarbonEntryFlow = ai.defineFlow(
             - Sarawak supplied by Sarawak Energy Bhd: 0.199
 
             Always return activityData (electricity purchase is an activityData). For scope 1, return emission factor and GWP. For scope 2, return gef`,
-            prompt: `Convert this invoice item into a CarbonEntry: ${JSON.stringify(item)}`,
-            output: {
-                schema: CarbonEntrySchema,
-            }
-        });
+      prompt: `Convert this invoice item into a CarbonEntry: ${JSON.stringify(item)}`,
+      output: {
+        schema: CarbonEntrySchema,
+      },
+    });
 
-        // error handling
-        if (!output) {
-            throw new Error("Conversion to carbon entry failed.")
-        }
-
-        return output;
+    // error handling
+    if (!output) {
+      throw new Error("Conversion to carbon entry failed.");
     }
+
+    return output;
+  }
 );
 export const convertToCarbonEntry = onCallGenkit(
-    {
-        secrets: [googleAIapiKey],
-    },
-    convertToCarbonEntryFlow
+  {
+    secrets: [googleAIapiKey],
+  },
+  convertToCarbonEntryFlow
 );
 
 
 // define flow for convertToGitaEntryFlow()
 export const convertToGitaEntryFlow = ai.defineFlow(
-    {
-        name: 'convertToGitaEntryFlow', 
-        inputSchema: ItemSchema,
-        outputSchema: GITAEntrySchema,
-    },
-    async (item) => {
-        const { output } = await ai.generate({
-            model: googleAI.model('gemini-2.5-flash'),
-            system: `You are a Malaysian Green Tax Consultant
+  {
+    name: "convertToGitaEntryFlow",
+    inputSchema: ItemSchema,
+    outputSchema: GITAEntrySchema,
+  },
+  async (item) => {
+    const {output} = await ai.generate({
+      model: googleAI.model("gemini-2.5-flash"),
+      system: `You are a Malaysian Green Tax Consultant
             Categorize the GITA asset's tier based on Malaysian Green Tech & CLimate Change Corporation (MyHIJAU):
             - Tier 1: sectors involving transportation, green building and renewable energy
             - Tier 2: sectors involving energy efficiency, renewable energy system, waste and water
@@ -292,27 +294,33 @@ export const convertToGitaEntryFlow = ai.defineFlow(
             Tax allowance is calculated as GITA = GITA asset worth × tier percentage
             Always return tax allowance (ITA) in Malaysian Riggit Currency (RM).
             `,
-            prompt: `Convert this eligible green itme into a GITAENtry: ${JSON.stringify(item)}`,
-            output: {
-                schema: GITAEntrySchema,
-            }
-        });
+      prompt: `Convert this eligible green itme into a GITAENtry: ${JSON.stringify(item)}`,
+      output: {
+        schema: GITAEntrySchema,
+      },
+    });
 
-        // error handling
-        if (!output) {
-            throw new Error("Conversion to GITA entry failed.")
-        }
-        
-        return output;
+    // error handling
+    if (!output) {
+      throw new Error("Conversion to GITA entry failed.");
     }
+
+    return output;
+  }
 );
 export const convertToGitaEntry = onCallGenkit(
-    {
-        secrets: [googleAIapiKey],
-    },
-    convertToGitaEntryFlow
+  {
+    secrets: [googleAIapiKey],
+  },
+  convertToGitaEntryFlow
 );
 
 // QUICK RUN COMMANDS:
 // cd kira_genkit/functions
 // npx genkit start -- npx tsx --watch src/index.ts
+
+// DEPLOY as CLOUD FUNCTION TO FIREBASE
+// cd kira_genkit
+// echo "GOOGLE_GENAI_API_KEY" | firebase functions:secrets:set GOOGLE_GENAI_API_KEY
+// firebase deploy
+// if 'firebase deploy' doesnt work, run 'npm install -g firebase-tools' first

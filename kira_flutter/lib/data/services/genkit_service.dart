@@ -96,12 +96,14 @@ class GenkitService {
     // refer to kira_genkit/functions/src/index.ts convertToGitaEntryFlow()
 
     final payload = lineItemToItemSchema(lineItem);
+    print('📤 Sending to Genkit (Gita): $payload');
 
     final result = await functions.
       httpsCallable('convertToGitaEntry')
       .call({
         payload
       });
+    print('📥 Received from Genkit (Gita): ${result.data}');
 
     return result.data as Map<String, dynamic>;
   }
@@ -111,12 +113,14 @@ class GenkitService {
     // refer to kira_genkit/functions/src/index.ts convertToGitaEntryFlow()
 
     final payload = lineItemToItemSchema(lineItem);
+    print('📤 Sending to Genkit (Carbon): $payload');
 
     final result = await functions.
       httpsCallable('convertToCarbonEntry')
       .call({
         payload
       });
+    print('📥 Received from Genkit (Carbon): ${result.data}');
 
     return result.data as Map<String, dynamic>;
   }

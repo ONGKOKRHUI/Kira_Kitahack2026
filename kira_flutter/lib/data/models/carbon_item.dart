@@ -1,14 +1,12 @@
-import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
-
 import 'package:kira_app/data/models/line_item.dart';
 
 class CarbonItem extends LineItem{
   final int scope;
-  final Float activityData;
-  final Float emissionFactor;
-  final Float gwp;
-  final Float gef;
-  final Float co2eEmission;
+  final double activityData;
+  final double emissionFactor;
+  final double gwp;
+  final double gef;
+  final double co2eEmission;
 
   CarbonItem({
     required super.id,
@@ -42,11 +40,11 @@ class CarbonItem extends LineItem{
       isGitaEligible: base.isGitaEligible,
       date: base.date,
       scope: json['scope'] as int,
-      activityData: json['activityData'] as Float,
-      emissionFactor: json['emissionFactor'] as Float,
-      gwp: json['gwp'] as Float,
-      gef: json['gef'] as Float,
-      co2eEmission: json['co2eEmission'] as Float,
+      activityData: json['activityData'] as double,
+      emissionFactor: json['emissionFactor'] as double,
+      gwp: json['gwp'] as double,
+      gef: json['gef'] as double,
+      co2eEmission: json['co2eEmission'] as double,
     );
   }
 
